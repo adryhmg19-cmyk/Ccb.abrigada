@@ -1,0 +1,1333 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Gestão de Brigada - Escala e Validades</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Google Fonts - Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              yellow: '#FEF08A', // Manhã (Yellow)
+              blue: '#93C5FD',   // Noite (Blue)
+              dark: '#1F2937',
+              danger: '#EF4444',
+              warning: '#F59E0B',
+              success: '#10B981'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* Print Styles for Shift Table */
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+      .print-only {
+        display: block !important;
+      }
+      body {
+        background: white;
+        color: black;
+      }
+      .card-print {
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 flex flex-col pb-20 md:pb-6">
+
+  <!-- TOP HEADER -->
+  <header class="bg-slate-900 text-white sticky top-0 z-30 shadow-md">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="bg-red-600 p-2 rounded-lg text-white font-bold text-lg flex items-center justify-center w-10 h-10 shadow">
+          <i class="fa-solid fa-fire-extinguisher"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-base md:text-lg leading-tight flex items-center gap-2">
+            Gestão de Brigada
+            <span id="roleBadge" class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-700 text-slate-300">
+              Convidado
+            </span>
+          </h1>
+          <p class="text-xs text-slate-400" id="subHeaderTitle">CCB Expedicionário Abrigadistas</p>
+        </div>
+      </div>
+
+      <!-- Action & Admin Button -->
+      <div class="flex items-center gap-2">
+        <button id="btnAdminAccess" onclick="toggleAdminModal()" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 font-medium px-3 py-2 rounded-lg border border-slate-700 transition">
+          <i class="fa-solid fa-user-shield text-amber-400"></i>
+          <span id="adminBtnText">Acesso ADM</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- NAVIGATION TABS -->
+  <nav class="bg-white border-b border-slate-200 sticky top-[57px] z-20 shadow-sm no-print">
+    <div class="max-w-6xl mx-auto px-2 flex justify-around md:justify-start md:space-x-8 overflow-x-auto">
+      <button onclick="switchTab('escala')" id="tab-escala" class="tab-btn py-3 px-4 font-semibold text-sm border-b-2 border-red-600 text-red-600 flex items-center gap-2 transition whitespace-nowrap">
+        <i class="fa-solid fa-calendar-days"></i>
+        <span>Escala Mensal</span>
+      </button>
+      <button onclick="switchTab('equipamentos')" id="tab-equipamentos" class="tab-btn py-3 px-4 font-medium text-sm text-slate-600 hover:text-slate-900 border-b-2 border-transparent flex items-center gap-2 transition whitespace-nowrap">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span>Validade & Equipamentos</span>
+        <span id="equipBadge" class="hidden ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-red-500 text-white">0</span>
+      </button>
+      <button onclick="switchTab('abrigadistas')" id="tab-abrigadistas" class="tab-btn py-3 px-4 font-medium text-sm text-slate-600 hover:text-slate-900 border-b-2 border-transparent flex items-center gap-2 transition whitespace-nowrap">
+        <i class="fa-solid fa-users"></i>
+        <span>Equipe de Abrigadistas</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <main class="max-w-6xl mx-auto px-4 py-6 flex-1 w-full">
+
+    <!-- TAB 1: ESCALA MENSAL -->
+    <section id="sec-escala" class="tab-content block space-y-6">
+      
+      <!-- Top Actions / Controls -->
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200 no-print">
+        <div class="flex items-center gap-3 w-full sm:w-auto">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Mês da Escala</label>
+            <input type="month" id="scaleMonthFilter" onchange="filterScaleByMonth()" class="bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-lg focus:ring-red-500 focus:border-red-500 block p-2 font-medium">
+          </div>
+          <div class="self-end pb-0.5">
+            <button onclick="printScale()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-2.5 rounded-lg border border-slate-300 flex items-center gap-2 transition">
+              <i class="fa-solid fa-print"></i>
+              <span>Imprimir / PDF</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="adminScaleActions" class="hidden flex items-center gap-2 w-full sm:w-auto justify-end">
+          <button onclick="openConfigTitleModal()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-3 py-2 rounded-lg border border-slate-300 flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-pen"></i> Título
+          </button>
+          <button onclick="openAddScaleModal()" class="text-xs bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-lg shadow-sm flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-plus"></i> Novo Dia de Escala
+          </button>
+        </div>
+      </div>
+
+      <!-- ESCALA CARD CONTAINER (Design inspirado exatamente na imagem enviada) -->
+      <div id="printArea" class="bg-white rounded-xl shadow-sm border border-slate-300 overflow-hidden card-print">
+        
+        <!-- Header Principal da Escala -->
+        <div class="bg-slate-200 border-b border-slate-300 py-3 px-4 text-center">
+          <h2 id="displayHeaderTitle" class="text-lg sm:text-xl font-bold uppercase tracking-wide text-slate-900">
+            Escala Ccb Expedicionário Abrigadistas
+          </h2>
+          <h3 id="displayMonthTitle" class="text-base sm:text-lg font-bold uppercase tracking-wider text-slate-800 mt-0.5">
+            OUTUBRO / 2026
+          </h3>
+        </div>
+
+        <!-- Tabela de Escala -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm border-collapse">
+            <thead>
+              <tr class="bg-slate-300 text-slate-800 border-b border-slate-400 text-xs sm:text-sm font-bold">
+                <th class="py-2.5 px-3 sm:px-4 text-center border-r border-slate-400 w-16">Dia</th>
+                <th class="py-2.5 px-3 sm:px-4 border-r border-slate-400 w-28 sm:w-36 text-center">Data</th>
+                <th class="py-2.5 px-3 sm:px-4">Abrigadistas em Servico</th>
+                <th class="py-2.5 px-2 text-center w-16 no-print admin-only hidden">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="scaleTableBody" class="divide-y divide-slate-300 font-semibold text-slate-900">
+              <!-- Renderizado Dinamicamente -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Legenda de Cores Conforme o Modelo -->
+        <div class="bg-slate-100 border-t border-slate-300 p-4 flex flex-wrap items-center gap-4 text-sm font-bold">
+          <div class="flex items-center gap-2">
+            <span class="inline-block w-8 h-6 bg-brand-yellow border border-amber-300 rounded shadow-sm"></span>
+            <span class="text-slate-800">Manhã</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="inline-block w-8 h-6 bg-brand-blue border border-blue-300 rounded shadow-sm"></span>
+            <span class="text-slate-800">Noite</span>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- TAB 2: VALIDADE & EQUIPAMENTOS DE BRIGADA -->
+    <section id="sec-equipamentos" class="tab-content hidden space-y-6">
+      
+      <!-- Resumo Dashboard -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div>
+            <p class="text-xs font-medium text-slate-500">Total Itens</p>
+            <p id="statTotalEquip" class="text-2xl font-extrabold text-slate-800">0</p>
+          </div>
+          <div class="p-3 bg-slate-100 text-slate-600 rounded-lg">
+            <i class="fa-solid fa-boxes-stacked text-xl"></i>
+          </div>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl border border-emerald-200 shadow-sm flex items-center justify-between">
+          <div>
+            <p class="text-xs font-medium text-emerald-600">Em Dia</p>
+            <p id="statOkEquip" class="text-2xl font-extrabold text-emerald-600">0</p>
+          </div>
+          <div class="p-3 bg-emerald-50 text-emerald-600 rounded-lg">
+            <i class="fa-solid fa-circle-check text-xl"></i>
+          </div>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl border border-amber-200 shadow-sm flex items-center justify-between">
+          <div>
+            <p class="text-xs font-medium text-amber-600">Atenção (&lt; 30d)</p>
+            <p id="statWarningEquip" class="text-2xl font-extrabold text-amber-600">0</p>
+          </div>
+          <div class="p-3 bg-amber-50 text-amber-600 rounded-lg">
+            <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+          </div>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl border border-red-200 shadow-sm flex items-center justify-between">
+          <div>
+            <p class="text-xs font-medium text-red-600">Vencidos</p>
+            <p id="statExpiredEquip" class="text-2xl font-extrabold text-red-600">0</p>
+          </div>
+          <div class="p-3 bg-red-50 text-red-600 rounded-lg">
+            <i class="fa-solid fa-circle-xmark text-xl"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls & Filter -->
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3">
+        <div class="flex flex-col sm:flex-row items-center gap-2 flex-1">
+          <!-- Filter type -->
+          <select id="equipFilterType" onchange="renderEquipments()" class="w-full sm:w-auto bg-slate-50 border border-slate-300 text-slate-800 text-xs rounded-lg p-2.5 font-medium">
+            <option value="ALL">Todos os Tipos</option>
+            <option value="Extintor PQS">Extintor PQS (Pó)</option>
+            <option value="Extintor CO2">Extintor CO2</option>
+            <option value="Extintor Água">Extintor Água Pres.</option>
+            <option value="Mangueira">Mangueira / Hidrante</option>
+            <option value="Primeiros Socorros">Maleta / Primeiro Socorros</option>
+            <option value="Outro">Outras Ferramentas</option>
+          </select>
+
+          <!-- Filter status -->
+          <select id="equipFilterStatus" onchange="renderEquipments()" class="w-full sm:w-auto bg-slate-50 border border-slate-300 text-slate-800 text-xs rounded-lg p-2.5 font-medium">
+            <option value="ALL">Todos os Status</option>
+            <option value="EXPIRED">Apenas Vencidos</option>
+            <option value="WARNING">Atenção (Próximos do Vencimento)</option>
+            <option value="OK">Apenas Em Dia</option>
+          </select>
+
+          <!-- Search Bar -->
+          <div class="relative w-full sm:w-64">
+            <input type="text" id="equipSearchInput" onkeyup="renderEquipments()" placeholder="Buscar local, código..." class="w-full bg-slate-50 border border-slate-300 text-slate-800 text-xs rounded-lg pl-8 pr-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-red-500">
+            <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-3 text-slate-400 text-xs"></i>
+          </div>
+        </div>
+
+        <div id="adminEquipActions" class="hidden">
+          <button onclick="openAddEquipModal()" class="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-sm flex items-center justify-center gap-2 transition">
+            <i class="fa-solid fa-plus"></i> Novo Equipamento
+          </button>
+        </div>
+      </div>
+
+      <!-- Equipment Cards Grid -->
+      <div id="equipmentsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Dynamically Populated -->
+      </div>
+
+    </section>
+
+    <!-- TAB 3: EQUIPE DE ABRIGADISTAS -->
+    <section id="sec-abrigadistas" class="tab-content hidden space-y-6">
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex justify-between items-center">
+        <div>
+          <h3 class="font-bold text-slate-800 text-base">Cadastro de Abrigadistas / Brigadistas</h3>
+          <p class="text-xs text-slate-500">Pessoas aptas para inserção na escala mensal</p>
+        </div>
+        <div id="adminMemberActions" class="hidden">
+          <button onclick="openAddMemberModal()" class="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg shadow-sm flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-user-plus"></i> Cadastrar Membro
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <ul id="membersList" class="divide-y divide-slate-200 text-sm">
+          <!-- Rendered dynamically -->
+        </ul>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL 1: ACESSO ADMIN / GERENCIAMENTO ADM -->
+  <div id="modalAdmin" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-fade-in">
+      <div class="bg-slate-900 text-white px-5 py-4 flex justify-between items-center">
+        <h3 class="font-bold text-base flex items-center gap-2">
+          <i class="fa-solid fa-shield-halved text-amber-400"></i>
+          <span>Autenticação de Administrador</span>
+        </h3>
+        <button onclick="toggleAdminModal()" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="p-5 space-y-4">
+        <!-- If user is Guest: Pin Entry -->
+        <div id="adminLoginForm" class="space-y-4">
+          <p class="text-xs text-slate-600 leading-relaxed">
+            O aplicativo permite no máximo <strong>2 Administradores ativos</strong> com permissão para criar escalas e cadastrar equipamentos.
+          </p>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Selecione o Slot de Administrador</label>
+            <select id="adminSlotSelect" class="w-full bg-slate-50 border border-slate-300 text-slate-800 text-xs rounded-lg p-2.5 font-medium">
+              <option value="1">Admin 1</option>
+              <option value="2">Admin 2</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">PIN / Senha de Acesso</label>
+            <input type="password" id="adminPinInput" maxlength="8" placeholder="Digite a senha (padrão: 1234)" class="w-full bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-lg p-2.5 font-medium focus:ring-2 focus:ring-red-500">
+            <span class="text-[11px] text-slate-400 mt-1 block">PIN padrão inicial: <strong>1234</strong></span>
+          </div>
+
+          <button onclick="loginAdmin()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold text-sm py-2.5 rounded-lg shadow transition">
+            Entrar como Administrador
+          </button>
+        </div>
+
+        <!-- If user is logged in as Admin -->
+        <div id="adminLoggedInView" class="hidden space-y-4 text-center py-2">
+          <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-xl">
+            <i class="fa-solid fa-user-check"></i>
+          </div>
+          <p class="text-sm font-semibold text-slate-800">Você está atualmente logado como <span id="currentAdminName" class="text-red-600">Admin</span></p>
+
+          <div class="border-t border-slate-200 pt-3 text-left space-y-2">
+            <label class="block text-xs font-semibold text-slate-700">Alterar seu PIN de Acesso</label>
+            <div class="flex gap-2">
+              <input type="password" id="newPinInput" placeholder="Novo PIN" class="bg-slate-50 border border-slate-300 text-xs rounded-lg p-2 flex-1">
+              <button onclick="changeAdminPin()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold px-3 py-2 rounded-lg">Salvar PIN</button>
+            </div>
+          </div>
+
+          <div class="pt-2">
+            <button onclick="logoutAdmin()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-2.5 rounded-lg border border-slate-300 transition">
+              Sair do Modo Administrador
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: ADICIONAR / EDITAR ESCALA DO DIA -->
+  <div id="modalScale" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
+      <div class="bg-slate-900 text-white px-5 py-4 flex justify-between items-center">
+        <h3 id="scaleModalTitle" class="font-bold text-base">Adicionar Dia na Escala</h3>
+        <button onclick="closeScaleModal()" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <form id="scaleForm" onsubmit="saveScaleItem(event)" class="p-5 space-y-4">
+        <input type="hidden" id="scaleId">
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Data</label>
+            <input type="date" id="scaleDate" required class="w-full bg-slate-50 border border-slate-300 text-slate-800 text-xs rounded-lg p-2.5">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Dia da Semana (Sigla)</label>
+            <select id="scaleDayName" required class="w-full bg-slate-50 border border-slate-300 text-slate-800 text-xs rounded-lg p-2.5">
+              <option value="sáb">sáb</option>
+              <option value="dom">dom</option>
+              <option value="qua">qua</option>
+              <option value="seg">seg</option>
+              <option value="ter">ter</option>
+              <option value="qui">qui</option>
+              <option value="sex">sex</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Seções de Abrigadistas por Turno -->
+        <div>
+          <label class="block text-xs font-bold text-amber-700 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-brand-yellow border border-amber-400"></span>
+            Abrigadistas - Turno MANHÃ (Amarelo)
+          </label>
+          <div id="morningShiftContainer" class="space-y-1.5 bg-amber-50/50 p-2.5 rounded-xl border border-amber-200">
+            <!-- Dynamic dropdowns for morning shift -->
+          </div>
+          <button type="button" onclick="addShiftSelect('morningShiftContainer', 'Manhã')" class="mt-1.5 text-xs text-amber-700 hover:text-amber-800 font-semibold flex items-center gap-1">
+            <i class="fa-solid fa-circle-plus"></i> + Adicionar Brigadista na Manhã
+          </button>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-blue-700 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-brand-blue border border-blue-400"></span>
+            Abrigadistas - Turno NOITE (Azul)
+          </label>
+          <div id="nightShiftContainer" class="space-y-1.5 bg-blue-50/50 p-2.5 rounded-xl border border-blue-200">
+            <!-- Dynamic dropdowns for night shift -->
+          </div>
+          <button type="button" onclick="addShiftSelect('nightShiftContainer', 'Noite')" class="mt-1.5 text-xs text-blue-700 hover:text-blue-800 font-semibold flex items-center gap-1">
+            <i class="fa-solid fa-circle-plus"></i> + Adicionar Brigadista na Noite
+          </button>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2 border-t border-slate-200">
+          <button type="button" onclick="closeScaleModal()" class="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg">Cancelar</button>
+          <button type="submit" class="px-5 py-2 bg-red-600 text-white text-xs font-bold rounded-lg shadow hover:bg-red-700">Salvar Dia</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 3: ADICIONAR / EDITAR EQUIPAMENTO -->
+  <div id="modalEquip" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
+      <div class="bg-slate-900 text-white px-5 py-4 flex justify-between items-center">
+        <h3 id="equipModalTitle" class="font-bold text-base">Cadastrar Equipamento / Ferramenta</h3>
+        <button onclick="closeEquipModal()" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <form id="equipForm" onsubmit="saveEquipment(event)" class="p-5 space-y-4">
+        <input type="hidden" id="equipId">
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Identificação / Código</label>
+            <input type="text" id="equipCode" required placeholder="Ex: EXT-01, MANG-03" class="w-full bg-slate-50 border border-slate-300 text-xs rounded-lg p-2.5">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Tipo de Equipamento</label>
+            <select id="equipType" required class="w-full bg-slate-50 border border-slate-300 text-xs rounded-lg p-2.5">
+              <option value="Extintor PQS">Extintor PQS (Pó Químico)</option>
+              <option value="Extintor CO2">Extintor CO2</option>
+              <option value="Extintor Água">Extintor Água Pressurizada</option>
+              <option value="Mangueira">Mangueira / Abrigo de Hidrante</option>
+              <option value="Primeiros Socorros">Maleta / Kit Primeiros Socorros</option>
+              <option value="Outro">Outras Ferramentas (Lanterna, Chave, etc.)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Localização Física</label>
+          <input type="text" id="equipLocation" required placeholder="Ex: Corredor Bloco A, Recepção, Galpão" class="w-full bg-slate-50 border border-slate-300 text-xs rounded-lg p-2.5">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Data Última Inspeção</label>
+            <input type="date" id="equipLastCheck" required class="w-full bg-slate-50 border border-slate-300 text-xs rounded-lg p-2.5">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Data de Vencimento</label>
+            <input type="date" id="equipExpiration" required class="w-full bg-slate-50 border border-slate-300 text-xs rounded-lg p-2.5">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Observações / Detalhes de Pressão</label>
+          <textarea id="equipNotes" rows="2" placeholder="Ex: Manômetro na zona verde, lacre intacto, teste hidrostático em dia..." class="w-full bg-slate-50 border border-slate-300 text-xs rounded-lg p-2.5"></textarea>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2 border-t border-slate-200">
+          <button type="button" onclick="closeEquipModal()" class="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg">Cancelar</button>
+          <button type="submit" class="px-5 py-2 bg-red-600 text-white text-xs font-bold rounded-lg shadow hover:bg-red-700">Salvar Equipamento</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 4: CADASTRAR BRIGADISTA -->
+  <div id="modalMember" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
+      <div class="bg-slate-900 text-white px-5 py-4 flex justify-between items-center">
+        <h3 class="font-bold text-base">Cadastrar Abrigadista</h3>
+        <button onclick="closeMemberModal()" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <form id="memberForm" onsubmit="saveMember(event)" class="p-5 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Nome Completo / Exibição</label>
+          <input type="text" id="memberName" required placeholder="Ex: Adryano, Estefany, Douglas..." class="w-full bg-slate-50 border border-slate-300 text-xs rounded-lg p-2.5 font-medium">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Telefone / Contato (Opcional)</label>
+          <input type="tel" id="memberPhone" placeholder="(00) 00000-0000" class="w-full bg-slate-50 border border-slate-300 text-xs rounded-lg p-2.5">
+        </div>
+        <div class="flex justify-end gap-2 pt-2 border-t border-slate-200">
+          <button type="button" onclick="closeMemberModal()" class="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg">Cancelar</button>
+          <button type="submit" class="px-5 py-2 bg-red-600 text-white text-xs font-bold rounded-lg shadow hover:bg-red-700">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 5: CONFIRMACAO DE MENSAGEM (Custom Alert) -->
+  <div id="modalAlert" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-xs p-5 text-center space-y-3">
+      <div id="alertIcon" class="w-12 h-12 rounded-full flex items-center justify-center mx-auto text-xl bg-amber-100 text-amber-600">
+        <i class="fa-solid fa-circle-info"></i>
+      </div>
+      <h4 id="alertTitle" class="font-bold text-slate-800 text-base">Atenção</h4>
+      <p id="alertMessage" class="text-xs text-slate-600 leading-relaxed"></p>
+      <button onclick="closeAlertModal()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs py-2 rounded-lg transition">OK</button>
+    </div>
+  </div>
+
+  <!-- MODAL 6: EDITAR TÍTULO DA ESCALA -->
+  <div id="modalTitleConfig" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4">
+      <h3 class="font-bold text-slate-800 text-base">Configurar Título da Escala</h3>
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">Título do Documento</label>
+        <input type="text" id="inputHeaderTitle" class="w-full bg-slate-50 border border-slate-300 text-xs rounded-lg p-2.5 font-bold">
+      </div>
+      <div class="flex justify-end gap-2">
+        <button onclick="closeConfigTitleModal()" class="px-3 py-1.5 bg-slate-100 text-xs font-semibold text-slate-700 rounded-lg">Cancelar</button>
+        <button onclick="saveHeaderTitle()" class="px-4 py-1.5 bg-red-600 text-xs font-bold text-white rounded-lg shadow">Salvar Título</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- APPLICATION LOGIC & FIREBASE SCRIPT -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, doc, onSnapshot, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // Firebase Config / Global variables
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'brigada-app-v1';
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+      apiKey: "demo-key",
+      authDomain: "demo.firebaseapp.com",
+      projectId: "demo-project",
+      storageBucket: "demo.appspot.com",
+      messagingSenderId: "000000000",
+      appId: "1:000000000:web:000000000"
+    };
+
+    let app, db, auth;
+    let isFirebaseReady = false;
+
+    // STATE MANAGEMENT
+    const STATE = {
+      isAdmin: false,
+      currentAdminSlot: null,
+      admins: {
+        "1": { pin: "1234", name: "Admin 1" },
+        "2": { pin: "1234", name: "Admin 2" }
+      },
+      headerTitle: "Escala Ccb Expedicionário Abrigadistas",
+      members: [
+        { id: 'm1', name: 'Adryano', phone: '' },
+        { id: 'm2', name: 'Nadarcia', phone: '' },
+        { id: 'm3', name: 'Estefany', phone: '' },
+        { id: 'm4', name: 'Douglas', phone: '' },
+        { id: 'm5', name: 'Amanda', phone: '' },
+        { id: 'm6', name: 'Ester', phone: '' },
+        { id: 'm7', name: 'Elias', phone: '' }
+      ],
+      // Dados fiéis à imagem anexada para o mês de Outubro/2026
+      scale: [
+        { id: 's1', date: '2026-10-03', dayName: 'sáb', morning: ['Adryano', 'Nadarcia'], night: [] },
+        { id: 's2', date: '2026-10-04', dayName: 'dom', morning: ['Adryano', 'Estefany'], night: ['Douglas', 'Amanda'] },
+        { id: 's3', date: '2026-10-07', dayName: 'qua', morning: ['Douglas', 'Amanda'], night: [] },
+        { id: 's4', date: '2026-10-10', dayName: 'sáb', morning: ['Adryano', 'Ester'], night: [] },
+        { id: 's5', date: '2026-10-11', dayName: 'dom', morning: ['Adryano', 'Estefany'], night: ['Douglas', 'Amanda'] },
+        { id: 's6', date: '2026-10-14', dayName: 'qua', morning: ['Ester'], night: [] },
+        { id: 's7', date: '2026-10-17', dayName: 'sáb', morning: ['Adryano', 'Nadarcia'], night: [] },
+        { id: 's8', date: '2026-10-18', dayName: 'dom', morning: ['Adryano', 'Ester'], night: ['Elias', 'Nadarcia'] },
+        { id: 's9', date: '2026-10-21', dayName: 'qua', morning: ['Estefany'], night: [] },
+        { id: 's10', date: '2026-10-24', dayName: 'sáb', morning: ['Douglas', 'Amanda'], night: [] },
+        { id: 's11', date: '2026-10-25', dayName: 'dom', morning: ['Adryano', 'Estefany'], night: ['Elias', 'Ester'] },
+        { id: 's12', date: '2026-10-28', dayName: 'qua', morning: ['Douglas', 'Amanda'], night: [] },
+        { id: 's13', date: '2026-10-31', dayName: 'sáb', morning: ['Douglas', 'Nadarcia'], night: [] }
+      ],
+      equipments: [
+        { id: 'e1', code: 'EXT-01', type: 'Extintor PQS', location: 'Hall Entrada', lastCheck: '2026-05-10', expiration: '2027-05-10', notes: 'Pressão ok, manômetro na faixa verde.' },
+        { id: 'e2', code: 'EXT-02', type: 'Extintor CO2', location: 'Sala Elétrica', lastCheck: '2026-09-01', expiration: '2026-11-05', notes: 'Próximo do vencimento do teste.' },
+        { id: 'e3', code: 'EXT-03', type: 'Extintor Água', location: 'Cozinha Refeitório', lastCheck: '2025-09-10', expiration: '2026-09-10', notes: 'Vencido! Necessita recarga urgente.' },
+        { id: 'e4', code: 'MANG-01', type: 'Mangueira', location: 'Abrigo 01 - Térreo', lastCheck: '2026-01-15', expiration: '2027-01-15', notes: 'Teste esguicho realizado com sucesso.' },
+        { id: 'e5', code: 'KIT-01', type: 'Primeiros Socorros', location: 'Recepção Central', lastCheck: '2026-10-01', expiration: '2027-03-30', notes: 'Gazes e ataduras repostas.' }
+      ]
+    };
+
+    // INIT FIREBASE
+    async function initDb() {
+      try {
+        app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+
+        isFirebaseReady = true;
+
+        // Setup real-time listeners for public data
+        listenFirestore();
+      } catch (err) {
+        console.warn("Firestore running in fallback offline mode:", err);
+        renderAll();
+      }
+    }
+
+    function listenFirestore() {
+      if (!isFirebaseReady) return;
+
+      const scaleRef = collection(db, 'artifacts', appId, 'public', 'data', 'scale');
+      const equipRef = collection(db, 'artifacts', appId, 'public', 'data', 'equipments');
+      const memberRef = collection(db, 'artifacts', appId, 'public', 'data', 'members');
+      const configRef = collection(db, 'artifacts', appId, 'public', 'data', 'config');
+
+      onSnapshot(scaleRef, (snapshot) => {
+        if (!snapshot.empty) {
+          STATE.scale = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        }
+        renderScale();
+      }, (err) => console.log(err));
+
+      onSnapshot(equipRef, (snapshot) => {
+        if (!snapshot.empty) {
+          STATE.equipments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        }
+        renderEquipments();
+        updateEquipBadges();
+      }, (err) => console.log(err));
+
+      onSnapshot(memberRef, (snapshot) => {
+        if (!snapshot.empty) {
+          STATE.members = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        }
+        renderMembers();
+      }, (err) => console.log(err));
+
+      onSnapshot(configRef, (snapshot) => {
+        snapshot.docs.forEach(docSnap => {
+          if (docSnap.id === 'header') {
+            STATE.headerTitle = docSnap.data().title || STATE.headerTitle;
+            document.getElementById('displayHeaderTitle').innerText = STATE.headerTitle;
+            document.getElementById('subHeaderTitle').innerText = STATE.headerTitle;
+          } else if (docSnap.id === 'admins') {
+            STATE.admins = docSnap.data().data || STATE.admins;
+          }
+        });
+      }, (err) => console.log(err));
+    }
+
+    async function syncToFirebase(collectionName, docId, data) {
+      if (!isFirebaseReady) return;
+      try {
+        const ref = doc(db, 'artifacts', appId, 'public', 'data', collectionName, docId);
+        await setDoc(ref, data, { merge: true });
+      } catch (e) {
+        console.error("Firestore sync error:", e);
+      }
+    }
+
+    async function deleteFromFirebase(collectionName, docId) {
+      if (!isFirebaseReady) return;
+      try {
+        const ref = doc(db, 'artifacts', appId, 'public', 'data', collectionName, docId);
+        await deleteDoc(ref);
+      } catch (e) {
+        console.error("Firestore delete error:", e);
+      }
+    }
+
+    // UI RENDERERS
+    function renderAll() {
+      renderScale();
+      renderEquipments();
+      renderMembers();
+      updateEquipBadges();
+    }
+
+    // TAB SWITCHER
+    window.switchTab = function(tabName) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('border-red-600', 'text-red-600', 'font-semibold');
+        btn.classList.add('border-transparent', 'text-slate-600');
+      });
+
+      document.getElementById(`sec-${tabName}`).classList.remove('hidden');
+      const activeBtn = document.getElementById(`tab-${tabName}`);
+      activeBtn.classList.add('border-red-600', 'text-red-600', 'font-semibold');
+      activeBtn.classList.remove('border-transparent', 'text-slate-600');
+    };
+
+    // ROLE & ADMIN PERMISSIONS
+    window.toggleAdminModal = function() {
+      const modal = document.getElementById('modalAdmin');
+      modal.classList.toggle('hidden');
+
+      if (STATE.isAdmin) {
+        document.getElementById('adminLoginForm').classList.add('hidden');
+        document.getElementById('adminLoggedInView').classList.remove('hidden');
+        document.getElementById('currentAdminName').innerText = STATE.admins[STATE.currentAdminSlot].name;
+      } else {
+        document.getElementById('adminLoginForm').classList.remove('hidden');
+        document.getElementById('adminLoggedInView').classList.add('hidden');
+      }
+    };
+
+    window.loginAdmin = function() {
+      const slot = document.getElementById('adminSlotSelect').value;
+      const pinInput = document.getElementById('adminPinInput').value;
+      const adminSlot = STATE.admins[slot];
+
+      if (adminSlot && adminSlot.pin === pinInput) {
+        STATE.isAdmin = true;
+        STATE.currentAdminSlot = slot;
+        updateAdminUI();
+        toggleAdminModal();
+        showAlert('Sucesso', `Autenticado com sucesso como ${adminSlot.name}!`, 'success');
+        document.getElementById('adminPinInput').value = '';
+      } else {
+        showAlert('Acesso Negado', 'PIN incorreto. Tente novamente (PIN Padrão: 1234).', 'danger');
+      }
+    };
+
+    window.logoutAdmin = function() {
+      STATE.isAdmin = false;
+      STATE.currentAdminSlot = null;
+      updateAdminUI();
+      toggleAdminModal();
+      showAlert('Modo Convidado', 'Você saiu do modo administrador. Alterações desabilitadas.', 'info');
+    };
+
+    window.changeAdminPin = function() {
+      const newPin = document.getElementById('newPinInput').value.trim();
+      if (!newPin || newPin.length < 4) {
+        showAlert('Erro', 'O novo PIN deve conter no mínimo 4 dígitos.', 'warning');
+        return;
+      }
+      STATE.admins[STATE.currentAdminSlot].pin = newPin;
+      syncToFirebase('config', 'admins', { data: STATE.admins });
+      document.getElementById('newPinInput').value = '';
+      showAlert('Sucesso', 'Senha/PIN alterada com sucesso!', 'success');
+    };
+
+    function updateAdminUI() {
+      const roleBadge = document.getElementById('roleBadge');
+      const adminBtnText = document.getElementById('adminBtnText');
+
+      if (STATE.isAdmin) {
+        roleBadge.innerText = `ADM (${STATE.admins[STATE.currentAdminSlot].name})`;
+        roleBadge.className = 'text-xs font-semibold px-2 py-0.5 rounded bg-amber-500 text-slate-900';
+        adminBtnText.innerText = 'Painel ADM';
+
+        document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
+        document.getElementById('adminScaleActions').classList.remove('hidden');
+        document.getElementById('adminEquipActions').classList.remove('hidden');
+        document.getElementById('adminMemberActions').classList.remove('hidden');
+      } else {
+        roleBadge.innerText = 'Convidado';
+        roleBadge.className = 'text-xs font-semibold px-2 py-0.5 rounded bg-slate-700 text-slate-300';
+        adminBtnText.innerText = 'Acesso ADM';
+
+        document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
+        document.getElementById('adminScaleActions').classList.add('hidden');
+        document.getElementById('adminEquipActions').classList.add('hidden');
+        document.getElementById('adminMemberActions').classList.add('hidden');
+      }
+      renderScale();
+      renderEquipments();
+      renderMembers();
+    }
+
+    // TAB 1 LOGIC: ESCALA MENSAL
+    function formatMonthYear(monthStr) {
+      if (!monthStr) return 'OUTUBRO / 2026';
+      const [year, month] = monthStr.split('-');
+      const monthNames = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
+      const mName = monthNames[parseInt(month) - 1] || 'OUTUBRO';
+      return `${mName} / ${year}`;
+    }
+
+    window.filterScaleByMonth = function() {
+      const monthVal = document.getElementById('scaleMonthFilter').value;
+      document.getElementById('displayMonthTitle').innerText = formatMonthYear(monthVal);
+      renderScale();
+    };
+
+    function renderScale() {
+      const tableBody = document.getElementById('scaleTableBody');
+      const selectedMonth = document.getElementById('scaleMonthFilter').value || '2026-10';
+
+      // Filter scale items by selected YYYY-MM
+      const filtered = STATE.scale.filter(item => item.date.startsWith(selectedMonth));
+
+      // Sort by date ascending
+      filtered.sort((a, b) => a.date.localeCompare(b.date));
+
+      if (filtered.length === 0) {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="4" class="py-8 text-center text-slate-400 font-normal">
+              Nenhuma escala cadastrada para este mês.
+            </td>
+          </tr>`;
+        return;
+      }
+
+      let html = '';
+      filtered.forEach((item, index) => {
+        // Format date to DD/MM/YYYY
+        const parts = item.date.split('-');
+        const formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
+
+        // Color backgrounds according to the uploaded model:
+        // Morning brigadistas = Yellow background (#FEF08A)
+        // Night brigadistas = Blue background (#93C5FD)
+        
+        let morningHTML = '';
+        if (item.morning && item.morning.length > 0) {
+          morningHTML = item.morning.map(name => 
+            `<span class="inline-block bg-brand-yellow text-slate-900 px-3 py-1 mr-2 my-0.5 font-bold rounded-sm border border-amber-300 shadow-sm">${escapeHtml(name)}</span>`
+          ).join('');
+        }
+
+        let nightHTML = '';
+        if (item.night && item.night.length > 0) {
+          nightHTML = item.night.map(name => 
+            `<span class="inline-block bg-brand-blue text-slate-900 px-3 py-1 mr-2 my-0.5 font-bold rounded-sm border border-blue-300 shadow-sm">${escapeHtml(name)}</span>`
+          ).join('');
+        }
+
+        const zebraBg = index % 2 === 0 ? 'bg-slate-200/60' : 'bg-slate-300/50';
+
+        html += `
+          <tr class="${zebraBg} hover:bg-slate-300/80 transition">
+            <td class="py-2.5 px-3 sm:px-4 text-center border-r border-slate-300 font-bold text-slate-800 lowercase">${item.dayName}</td>
+            <td class="py-2.5 px-3 sm:px-4 text-center border-r border-slate-300 font-bold text-slate-900 tracking-wide">${formattedDate}</td>
+            <td class="py-2.5 px-3 sm:px-4">
+              <div class="flex flex-wrap items-center gap-1">
+                ${morningHTML}
+                ${nightHTML}
+              </div>
+            </td>
+            ${STATE.isAdmin ? `
+              <td class="py-2.5 px-2 text-center no-print admin-only">
+                <div class="flex items-center justify-center gap-1">
+                  <button onclick="editScaleItem('${item.id}')" class="p-1 text-slate-600 hover:text-slate-900"><i class="fa-solid fa-pen-to-square"></i></button>
+                  <button onclick="deleteScaleItem('${item.id}')" class="p-1 text-red-600 hover:text-red-800"><i class="fa-solid fa-trash"></i></button>
+                </div>
+              </td>
+            ` : ''}
+          </tr>
+        `;
+      });
+
+      tableBody.innerHTML = html;
+    }
+
+    // ADD / EDIT SCALE MODAL
+    window.openAddScaleModal = function() {
+      document.getElementById('scaleForm').reset();
+      document.getElementById('scaleId').value = '';
+      document.getElementById('scaleModalTitle').innerText = 'Adicionar Dia na Escala';
+      
+      // Clear container and add default selects
+      document.getElementById('morningShiftContainer').innerHTML = '';
+      document.getElementById('nightShiftContainer').innerHTML = '';
+      
+      addShiftSelect('morningShiftContainer', 'Manhã');
+      addShiftSelect('nightShiftContainer', 'Noite');
+
+      document.getElementById('modalScale').classList.remove('hidden');
+    };
+
+    window.addShiftSelect = function(containerId, shiftName, selectedValue = '') {
+      const container = document.getElementById(containerId);
+      const div = document.createElement('div');
+      div.className = 'flex items-center gap-2';
+      
+      let options = STATE.members.map(m => `<option value="${escapeHtml(m.name)}" ${m.name === selectedValue ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('');
+      
+      div.innerHTML = `
+        <select class="shift-select w-full bg-white border border-slate-300 text-xs rounded-lg p-2 font-semibold">
+          <option value="">-- Selecione o Brigadista --</option>
+          ${options}
+        </select>
+        <button type="button" onclick="this.parentElement.remove()" class="p-1.5 text-slate-400 hover:text-red-600"><i class="fa-solid fa-xmark"></i></button>
+      `;
+      container.appendChild(div);
+    };
+
+    window.closeScaleModal = function() {
+      document.getElementById('modalScale').classList.add('hidden');
+    };
+
+    window.saveScaleItem = function(e) {
+      e.preventDefault();
+      const id = document.getElementById('scaleId').value || 's_' + Date.now();
+      const date = document.getElementById('scaleDate').value;
+      const dayName = document.getElementById('scaleDayName').value;
+
+      const morningSelects = document.querySelectorAll('#morningShiftContainer select');
+      const morning = Array.from(morningSelects).map(s => s.value).filter(v => v !== '');
+
+      const nightSelects = document.querySelectorAll('#nightShiftContainer select');
+      const night = Array.from(nightSelects).map(s => s.value).filter(v => v !== '');
+
+      const scaleObj = { id, date, dayName, morning, night };
+
+      const existingIndex = STATE.scale.findIndex(s => s.id === id);
+      if (existingIndex >= 0) {
+        STATE.scale[existingIndex] = scaleObj;
+      } else {
+        STATE.scale.push(scaleObj);
+      }
+
+      syncToFirebase('scale', id, scaleObj);
+      renderScale();
+      closeScaleModal();
+      showAlert('Escala Atualizada', 'Registro de escala salvo com sucesso!', 'success');
+    };
+
+    window.editScaleItem = function(id) {
+      const item = STATE.scale.find(s => s.id === id);
+      if (!item) return;
+
+      document.getElementById('scaleId').value = item.id;
+      document.getElementById('scaleDate').value = item.date;
+      document.getElementById('scaleDayName').value = item.dayName;
+
+      const mContainer = document.getElementById('morningShiftContainer');
+      const nContainer = document.getElementById('nightShiftContainer');
+      mContainer.innerHTML = '';
+      nContainer.innerHTML = '';
+
+      if (item.morning && item.morning.length > 0) {
+        item.morning.forEach(val => addShiftSelect('morningShiftContainer', 'Manhã', val));
+      } else {
+        addShiftSelect('morningShiftContainer', 'Manhã');
+      }
+
+      if (item.night && item.night.length > 0) {
+        item.night.forEach(val => addShiftSelect('nightShiftContainer', 'Noite', val));
+      } else {
+        addShiftSelect('nightShiftContainer', 'Noite');
+      }
+
+      document.getElementById('scaleModalTitle').innerText = 'Editar Dia na Escala';
+      document.getElementById('modalScale').classList.remove('hidden');
+    };
+
+    window.deleteScaleItem = function(id) {
+      if (confirm('Deseja realmente excluir este dia da escala?')) {
+        STATE.scale = STATE.scale.filter(s => s.id !== id);
+        deleteFromFirebase('scale', id);
+        renderScale();
+      }
+    };
+
+    // HEADER CONFIG MODAL
+    window.openConfigTitleModal = function() {
+      document.getElementById('inputHeaderTitle').value = STATE.headerTitle;
+      document.getElementById('modalTitleConfig').classList.remove('hidden');
+    };
+
+    window.closeConfigTitleModal = function() {
+      document.getElementById('modalTitleConfig').classList.add('hidden');
+    };
+
+    window.saveHeaderTitle = function() {
+      const val = document.getElementById('inputHeaderTitle').value.trim();
+      if (val) {
+        STATE.headerTitle = val;
+        document.getElementById('displayHeaderTitle').innerText = val;
+        document.getElementById('subHeaderTitle').innerText = val;
+        syncToFirebase('config', 'header', { title: val });
+      }
+      closeConfigTitleModal();
+    };
+
+    window.printScale = function() {
+      window.print();
+    };
+
+    // TAB 2 LOGIC: EQUIPAMENTOS E VALIDADES
+    function calculateDaysRemaining(expDateStr) {
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      const exp = new Date(expDateStr + 'T00:00:00');
+      const diffTime = exp - today;
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    }
+
+    function getEquipStatus(expDateStr) {
+      const days = calculateDaysRemaining(expDateStr);
+      if (days < 0) return { status: 'EXPIRED', label: 'VENCIDO!', colorClass: 'bg-red-100 text-red-800 border-red-300', icon: 'fa-circle-xmark', days };
+      if (days <= 30) return { status: 'WARNING', label: `Vence em ${days} dia(s)`, colorClass: 'bg-amber-100 text-amber-800 border-amber-300', icon: 'fa-triangle-exclamation', days };
+      return { status: 'OK', label: 'Em Dia', colorClass: 'bg-emerald-100 text-emerald-800 border-emerald-300', icon: 'fa-circle-check', days };
+    }
+
+    function updateEquipBadges() {
+      let okCount = 0, warnCount = 0, expCount = 0;
+      STATE.equipments.forEach(e => {
+        const status = getEquipStatus(e.expiration).status;
+        if (status === 'OK') okCount++;
+        else if (status === 'WARNING') warnCount++;
+        else if (status === 'EXPIRED') expCount++;
+      });
+
+      document.getElementById('statTotalEquip').innerText = STATE.equipments.length;
+      document.getElementById('statOkEquip').innerText = okCount;
+      document.getElementById('statWarningEquip').innerText = warnCount;
+      document.getElementById('statExpiredEquip').innerText = expCount;
+
+      const badge = document.getElementById('equipBadge');
+      if (expCount + warnCount > 0) {
+        badge.innerText = expCount + warnCount;
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
+
+    function renderEquipments() {
+      const grid = document.getElementById('equipmentsGrid');
+      const typeFilter = document.getElementById('equipFilterType').value;
+      const statusFilter = document.getElementById('equipFilterStatus').value;
+      const searchQuery = document.getElementById('equipSearchInput').value.toLowerCase().trim();
+
+      let filtered = STATE.equipments.filter(item => {
+        const statusObj = getEquipStatus(item.expiration);
+        
+        const matchesType = typeFilter === 'ALL' || item.type === typeFilter;
+        const matchesStatus = statusFilter === 'ALL' || statusObj.status === statusFilter;
+        const matchesSearch = item.code.toLowerCase().includes(searchQuery) || item.location.toLowerCase().includes(searchQuery) || item.type.toLowerCase().includes(searchQuery);
+
+        return matchesType && matchesStatus && matchesSearch;
+      });
+
+      if (filtered.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full bg-white p-8 rounded-xl text-center text-slate-400 border border-slate-200">
+            <i class="fa-solid fa-box-open text-3xl mb-2"></i>
+            <p class="text-sm font-medium">Nenhum equipamento encontrado com estes filtros.</p>
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+      filtered.forEach(e => {
+        const statusObj = getEquipStatus(e.expiration);
+        
+        let typeIcon = 'fa-fire-extinguisher';
+        if (e.type.includes('Mangueira')) typeIcon = 'fa-faucet-drip';
+        if (e.type.includes('Primeiros Socorros')) typeIcon = 'fa-kit-medical';
+
+        html += `
+          <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col justify-between space-y-3 relative overflow-hidden">
+            <!-- Header bar indicating status color -->
+            <div class="flex items-start justify-between">
+              <div class="flex items-center gap-2.5">
+                <div class="p-2.5 bg-slate-100 text-slate-800 rounded-lg">
+                  <i class="fa-solid ${typeIcon} text-lg"></i>
+                </div>
+                <div>
+                  <h4 class="font-extrabold text-slate-900 text-base leading-tight">${escapeHtml(e.code)}</h4>
+                  <span class="text-xs text-slate-500 font-medium">${escapeHtml(e.type)}</span>
+                </div>
+              </div>
+
+              <span class="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full border ${statusObj.colorClass}">
+                <i class="fa-solid ${statusObj.icon}"></i>
+                ${statusObj.label}
+              </span>
+            </div>
+
+            <!-- Details -->
+            <div class="text-xs space-y-1.5 text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+              <p class="flex items-center gap-1.5 font-semibold text-slate-800">
+                <i class="fa-solid fa-location-dot text-slate-400"></i>
+                <span>Local: ${escapeHtml(e.location)}</span>
+              </p>
+              <div class="grid grid-cols-2 gap-1 pt-1 text-[11px]">
+                <div>
+                  <span class="text-slate-400 block">Última Inspeção:</span>
+                  <span class="font-medium text-slate-700">${formatDateBR(e.lastCheck)}</span>
+                </div>
+                <div>
+                  <span class="text-slate-400 block">Vencimento:</span>
+                  <span class="font-bold text-slate-900">${formatDateBR(e.expiration)}</span>
+                </div>
+              </div>
+              ${e.notes ? `<p class="text-[11px] text-slate-500 italic pt-1 border-t border-slate-200">${escapeHtml(e.notes)}</p>` : ''}
+            </div>
+
+            <!-- Admin Actions -->
+            ${STATE.isAdmin ? `
+              <div class="flex items-center justify-end gap-2 pt-1 border-t border-slate-100 admin-only">
+                <button onclick="editEquipment('${e.id}')" class="text-xs text-slate-600 hover:text-slate-900 font-semibold flex items-center gap-1">
+                  <i class="fa-solid fa-pen"></i> Editar
+                </button>
+                <button onclick="deleteEquipment('${e.id}')" class="text-xs text-red-600 hover:text-red-800 font-semibold flex items-center gap-1 ml-2">
+                  <i class="fa-solid fa-trash"></i> Excluir
+                </button>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      });
+
+      grid.innerHTML = html;
+    }
+
+    window.openAddEquipModal = function() {
+      document.getElementById('equipForm').reset();
+      document.getElementById('equipId').value = '';
+      document.getElementById('equipModalTitle').innerText = 'Cadastrar Equipamento';
+      document.getElementById('modalEquip').classList.remove('hidden');
+    };
+
+    window.closeEquipModal = function() {
+      document.getElementById('modalEquip').classList.add('hidden');
+    };
+
+    window.saveEquipment = function(e) {
+      e.preventDefault();
+      const id = document.getElementById('equipId').value || 'e_' + Date.now();
+      const code = document.getElementById('equipCode').value.trim();
+      const type = document.getElementById('equipType').value;
+      const location = document.getElementById('equipLocation').value.trim();
+      const lastCheck = document.getElementById('equipLastCheck').value;
+      const expiration = document.getElementById('equipExpiration').value;
+      const notes = document.getElementById('equipNotes').value.trim();
+
+      const item = { id, code, type, location, lastCheck, expiration, notes };
+
+      const existingIndex = STATE.equipments.findIndex(eq => eq.id === id);
+      if (existingIndex >= 0) {
+        STATE.equipments[existingIndex] = item;
+      } else {
+        STATE.equipments.push(item);
+      }
+
+      syncToFirebase('equipments', id, item);
+      renderEquipments();
+      updateEquipBadges();
+      closeEquipModal();
+      showAlert('Equipamento Salvo', 'As informações do equipamento foram atualizadas com sucesso!', 'success');
+    };
+
+    window.editEquipment = function(id) {
+      const e = STATE.equipments.find(item => item.id === id);
+      if (!e) return;
+
+      document.getElementById('equipId').value = e.id;
+      document.getElementById('equipCode').value = e.code;
+      document.getElementById('equipType').value = e.type;
+      document.getElementById('equipLocation').value = e.location;
+      document.getElementById('equipLastCheck').value = e.lastCheck;
+      document.getElementById('equipExpiration').value = e.expiration;
+      document.getElementById('equipNotes').value = e.notes || '';
+
+      document.getElementById('equipModalTitle').innerText = 'Editar Equipamento';
+      document.getElementById('modalEquip').classList.remove('hidden');
+    };
+
+    window.deleteEquipment = function(id) {
+      if (confirm('Tem certeza que deseja excluir este equipamento?')) {
+        STATE.equipments = STATE.equipments.filter(item => item.id !== id);
+        deleteFromFirebase('equipments', id);
+        renderEquipments();
+        updateEquipBadges();
+      }
+    };
+
+    // TAB 3 LOGIC: ABRIGADISTAS
+    function renderMembers() {
+      const list = document.getElementById('membersList');
+      if (STATE.members.length === 0) {
+        list.innerHTML = `<li class="p-4 text-center text-slate-400 text-xs">Nenhum abrigadista cadastrado.</li>`;
+        return;
+      }
+
+      let html = '';
+      STATE.members.forEach(m => {
+        html += `
+          <li class="p-3.5 flex items-center justify-between hover:bg-slate-50 transition">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs">
+                ${m.name.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <p class="font-bold text-slate-800 text-sm">${escapeHtml(m.name)}</p>
+                ${m.phone ? `<p class="text-xs text-slate-400">${escapeHtml(m.phone)}</p>` : ''}
+              </div>
+            </div>
+            ${STATE.isAdmin ? `
+              <button onclick="deleteMember('${m.id}')" class="text-xs text-red-500 hover:text-red-700 p-1.5 admin-only">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            ` : ''}
+          </li>
+        `;
+      });
+
+      list.innerHTML = html;
+    }
+
+    window.openAddMemberModal = function() {
+      document.getElementById('memberForm').reset();
+      document.getElementById('modalMember').classList.remove('hidden');
+    };
+
+    window.closeMemberModal = function() {
+      document.getElementById('modalMember').classList.add('hidden');
+    };
+
+    window.saveMember = function(e) {
+      e.preventDefault();
+      const name = document.getElementById('memberName').value.trim();
+      const phone = document.getElementById('memberPhone').value.trim();
+      if (!name) return;
+
+      const id = 'm_' + Date.now();
+      const newMember = { id, name, phone };
+
+      STATE.members.push(newMember);
+      syncToFirebase('members', id, newMember);
+      renderMembers();
+      closeMemberModal();
+      showAlert('Sucesso', 'Novo brigadista adicionado à equipe!', 'success');
+    };
+
+    window.deleteMember = function(id) {
+      if (confirm('Remover este brigadista da equipe?')) {
+        STATE.members = STATE.members.filter(m => m.id !== id);
+        deleteFromFirebase('members', id);
+        renderMembers();
+      }
+    };
+
+    // UTILS
+    function formatDateBR(dateStr) {
+      if (!dateStr) return '-';
+      const parts = dateStr.split('-');
+      if (parts.length < 3) return dateStr;
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/[&<>"']/g, function(m) {
+        return {
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#039;'
+        }[m];
+      });
+    }
+
+    window.showAlert = function(title, msg, type = 'info') {
+      const modal = document.getElementById('modalAlert');
+      document.getElementById('alertTitle').innerText = title;
+      document.getElementById('alertMessage').innerText = msg;
+
+      const iconDiv = document.getElementById('alertIcon');
+      if (type === 'success') {
+        iconDiv.className = 'w-12 h-12 rounded-full flex items-center justify-center mx-auto text-xl bg-emerald-100 text-emerald-600';
+        iconDiv.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+      } else if (type === 'danger') {
+        iconDiv.className = 'w-12 h-12 rounded-full flex items-center justify-center mx-auto text-xl bg-red-100 text-red-600';
+        iconDiv.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i>';
+      } else {
+        iconDiv.className = 'w-12 h-12 rounded-full flex items-center justify-center mx-auto text-xl bg-amber-100 text-amber-600';
+        iconDiv.innerHTML = '<i class="fa-solid fa-circle-info"></i>';
+      }
+
+      modal.classList.remove('hidden');
+    };
+
+    window.closeAlertModal = function() {
+      document.getElementById('modalAlert').classList.add('hidden');
+    };
+
+    // ON INITIAL LOAD
+    window.addEventListener('load', () => {
+      // Set current month in filter input
+      const now = new Date();
+      const monthStr = now.toISOString().slice(0, 7); // e.g. "2026-10"
+      document.getElementById('scaleMonthFilter').value = '2026-10'; // default matching sample image
+
+      initDb();
+      renderAll();
+    });
+  </script>
+</body>
+</html>
+"Criador Adryano Mendes Gonzaga™
